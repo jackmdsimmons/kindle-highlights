@@ -138,6 +138,12 @@ async def scrape_kindle_highlights() -> list[dict]:
         await browser.close()
 
     print(f"\nTotal highlights scraped: {len(highlights)}")
+
+    if len(highlights) == 0:
+        print("\nWARNING: No highlights were found.")
+        print("This usually means Amazon has updated their page structure.")
+        print("Please open an issue at https://github.com/jackmdsimmons/kindle-highlights")
+
     return highlights
 
 
