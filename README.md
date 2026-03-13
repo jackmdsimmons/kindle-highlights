@@ -4,10 +4,14 @@ Scrapes all your Kindle highlights from [read.amazon.com/notebook](https://read.
 
 ## Setup
 
-**1. Install Python**
-Download from [python.org](https://www.python.org/downloads/) if you don't have it.
+**Windows — one click**
 
-**2. Install dependencies**
+Download the repo and double-click `setup.bat`. It will install everything and offer to run the script immediately.
+
+**Manual (any OS)**
+
+1. Install Python from [python.org](https://www.python.org/downloads/) if you don't have it.
+2. Install dependencies:
 ```
 pip install -r requirements.txt
 playwright install chromium
