@@ -1,0 +1,9 @@
+# Output data
+*.csv
+*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
