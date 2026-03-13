@@ -1,10 +1,22 @@
 """
-Kindle Highlights → CSV 
-Scrapes read.amazon.com/notebook and saves highlights to a CSV file.
+Kindle Highlights -> CSV
+Scrapes read.amazon.com/notebook and saves all your Kindle highlights to a CSV file.
 
-Usage:
-  python kindle_to_sheets.py
+Setup:
+  1. Install dependencies:
+       pip install -r requirements.txt
+       playwright install chromium
 
+  2. Run:
+       python kindle_to_csv.py
+
+  3. Log in to your Amazon account in the browser window that opens.
+     The script continues automatically once you are logged in.
+
+Config (optional):
+  - OUTPUT_FILE  : change the output filename
+  - BOOK_FILTER  : limit export to specific books (see below)
+  - HEADLESS     : set to True to run without a visible browser window
 """
 
 import asyncio
@@ -12,14 +24,20 @@ import csv
 import re
 from playwright.async_api import async_playwright
 
-# Set to True to see the browser window while scraping
+# ── Config ────────────────────────────────────────────────────────────────────
+
+OUTPUT_FILE = "kindle_highlights.csv"
+
+# Set to True to run without a visible browser window
 HEADLESS = False
 
-# Optional: filter to specific book titles (case-insensitive substrings).
+# Optional: export only specific books.
+# Add case-insensitive substrings of book titles to filter.
+# Example: BOOK_FILTER = ["2666", "Dune"]
 # Leave empty to export all books.
 BOOK_FILTER: list[str] = []
 
-OUTPUT_FILE = "kindle_highlights.csv"
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 async def scrape_kindle_highlights() -> list[dict]:
@@ -33,17 +51,15 @@ async def scrape_kindle_highlights() -> list[dict]:
         print("Opening Amazon Kindle notebook...")
         await page.goto("https://read.amazon.com/notebook")
 
-        # Wait for login if needed
         if "signin" in page.url or "ap/signin" in page.url:
             print("\n>>> Amazon login required.")
-            print(">>> Please log in in the browser window.")
-            print(">>> The script will continue automatically once you're logged in.\n")
+            print(">>> Please log in to your Amazon account in the browser window.")
+            print(">>> The script will continue automatically once you are logged in.\n")
             await page.wait_for_url("**/notebook**", timeout=120_000)
 
         print("Logged in. Loading notebook...")
         await page.wait_for_load_state("networkidle")
 
-        # Get all books from the sidebar
         book_elements = await page.query_selector_all("div.kp-notebook-library-each-book")
         if not book_elements:
             book_elements = await page.query_selector_all("[id^='kp-notebook-library']")
@@ -61,15 +77,16 @@ async def scrape_kindle_highlights() -> list[dict]:
             if BOOK_FILTER and not any(f.lower() in book_title.lower() for f in BOOK_FILTER):
                 continue
 
-            print(f"[{i+1}/{len(book_elements)}] {book_title} — {author}")
+            print(f"[{i+1}/{len(book_elements)}] {book_title} - {author}")
 
             if i == 0:
-                # First book is pre-selected on load — don't click, just wait for its
-                # highlights to appear naturally.
+                # The first book is pre-selected when the page loads, so clicking it
+                # produces no network activity and content may not refresh. Instead,
+                # wait for its highlights to appear from the initial page load.
                 try:
                     await page.wait_for_selector("#highlight, .kp-notebook-highlight", timeout=10000)
                 except Exception:
-                    # Still nothing — force a click
+                    # Nothing appeared — force a click as fallback
                     await book_el.click()
                     await page.wait_for_load_state("networkidle")
                     try:
@@ -83,6 +100,7 @@ async def scrape_kindle_highlights() -> list[dict]:
                     await page.wait_for_selector("#highlight, .kp-notebook-highlight", timeout=5000)
                 except Exception:
                     pass
+
             await page.wait_for_timeout(500)
 
             highlight_elements = await page.query_selector_all("#highlight")
@@ -139,7 +157,6 @@ async def main():
         return
 
     save_csv(highlights, OUTPUT_FILE)
-    print(f"\nDone! Open Google Sheets > File > Import > upload '{OUTPUT_FILE}'")
 
 
 if __name__ == "__main__":
